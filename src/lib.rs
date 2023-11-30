@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
+use std::ops::RangeBounds;
 
 #[derive(Debug, Default)]
 pub struct ChthollyTree<T> {
@@ -57,6 +58,30 @@ impl<T: Clone> ChthollyTree<T> {
             *r = at;
             self.inner.insert(at, (rb, value));
         }
+    }
+
+    pub fn assign(&mut self, val: T, range: impl RangeBounds<usize>) {
+        let l = match range.start_bound() {
+            std::ops::Bound::Included(&l) => l,
+            std::ops::Bound::Excluded(l) => l + 1,
+            std::ops::Bound::Unbounded => 0,
+        };
+        let r = match range.start_bound() {
+            std::ops::Bound::Included(r) => match r.checked_sub(1) {
+                Some(r) => r,
+                None => return,
+            },
+            std::ops::Bound::Excluded(&r) => r,
+            std::ops::Bound::Unbounded => self.len(),
+        };
+
+        if l >= r || r > self.len() {
+            return;
+        }
+
+        self.split(l);
+        self.split(r - 1);
+        self.inner.insert(l, (r, val));
     }
 }
 

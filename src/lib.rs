@@ -60,7 +60,7 @@ impl<T: Clone> ChthollyTree<T> {
         }
     }
 
-    pub fn assign(&mut self, val: T, range: impl RangeBounds<usize>) {
+    fn split_range(&mut self, range: impl RangeBounds<usize>) -> Option<(usize, usize)> {
         let l = match range.start_bound() {
             std::ops::Bound::Included(&l) => l,
             std::ops::Bound::Excluded(l) => l + 1,
@@ -69,18 +69,37 @@ impl<T: Clone> ChthollyTree<T> {
         let r = match range.start_bound() {
             std::ops::Bound::Included(r) => match r.checked_sub(1) {
                 Some(r) => r,
-                None => return,
+                None => return None,
             },
             std::ops::Bound::Excluded(&r) => r,
             std::ops::Bound::Unbounded => self.len(),
         };
 
         if l >= r || r > self.len() {
-            return;
+            return None;
         }
 
         self.split(l);
         self.split(r - 1);
+
+        Some((l, r))
+    }
+
+    pub fn assign(&mut self, val: T, range: impl RangeBounds<usize>) {
+        let (l, r) = match self.split_range(range) {
+            Some(rg) => rg,
+            _ => return,
+        };
+
+        self.inner
+            .range(l + 1..r)
+            .map(|(k, _)| *k)
+            .collect::<Vec<_>>()
+            .iter()
+            .for_each(|k| {
+                self.inner.remove(k);
+            });
+
         self.inner.insert(l, (r, val));
     }
 }

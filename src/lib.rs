@@ -37,6 +37,13 @@ impl<T: Eq> ChthollyTree<T> {
         }
         self.len += 1;
     }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            cur: None,
+            iter: self.inner.iter(),
+        }
+    }
 }
 
 impl<T: Clone> ChthollyTree<T> {
@@ -123,6 +130,26 @@ impl<T: Eq> FromIterator<T> for ChthollyTree<T> {
     }
 }
 
+pub struct Iter<'a, T> {
+    cur: Option<(usize, &'a T)>,
+    iter: std::collections::btree_map::Iter<'a, usize, (usize, T)>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let cur = match self.cur.as_mut() {
+            None | Some((0, _)) => self
+                .cur
+                .insert(self.iter.next().map(|(l, (r, val))| (r - l, val))?),
+            Some(cur) => cur,
+        };
+        cur.0 -= 1;
+        Some(cur.1)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::ChthollyTree;
@@ -131,5 +158,12 @@ mod test {
     fn from_iter() {
         let tree = [1, 1, 2, 3, 4, 5, 5, 5, 5].into_iter().collect::<ChthollyTree<_>>();
         assert_eq!(tree.inner.into_iter().collect::<Vec<_>>(), vec![(0, (2, 1)), (2, (3, 2)), (3, (4, 3)), (4, (5, 4)), (5, (9, 5))]);
+    }
+
+    #[test]
+    fn iter() {
+        let data = [-1, 2, 2, 3, 0, 0, 0, -4, -4, 10, 10, 12];
+        let tree = ChthollyTree::from_iter(data);
+        assert_eq!(tree.iter().copied().collect::<Vec<_>>(), data);
     }
 }

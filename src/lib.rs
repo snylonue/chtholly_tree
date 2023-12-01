@@ -102,6 +102,15 @@ impl<T: Clone> ChthollyTree<T> {
 
         self.inner.insert(l, (r, val));
     }
+
+    pub fn map(&mut self, f: impl Fn(&mut T), range: impl RangeBounds<usize>) {
+        let (l, r) = match self.split_range(range) {
+            Some(rg) => rg,
+            _ => return,
+        };
+
+        self.inner.range_mut(l..r).for_each(|(_, (_, val))| f(val));
+    }
 }
 
 impl<T: Eq> FromIterator<T> for ChthollyTree<T> {

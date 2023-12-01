@@ -122,3 +122,14 @@ impl<T: Eq> FromIterator<T> for ChthollyTree<T> {
         tree
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::ChthollyTree;
+
+    #[test]
+    fn from_iter() {
+        let tree = [1, 1, 2, 3, 4, 5, 5, 5, 5].into_iter().collect::<ChthollyTree<_>>();
+        assert_eq!(tree.inner.into_iter().collect::<Vec<_>>(), vec![(0, (2, 1)), (2, (3, 2)), (3, (4, 3)), (4, (5, 4)), (5, (9, 5))]);
+    }
+}

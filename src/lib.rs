@@ -23,6 +23,13 @@ impl<T> ChthollyTree<T> {
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            cur: None,
+            iter: self.inner.iter(),
+        }
+    }
 }
 
 impl<T: Eq> ChthollyTree<T> {
@@ -36,13 +43,6 @@ impl<T: Eq> ChthollyTree<T> {
             }
         }
         self.len += 1;
-    }
-
-    pub fn iter(&self) -> Iter<'_, T> {
-        Iter {
-            cur: None,
-            iter: self.inner.iter(),
-        }
     }
 }
 

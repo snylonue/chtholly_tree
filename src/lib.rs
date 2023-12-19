@@ -73,7 +73,7 @@ impl<T: Clone> ChthollyTree<T> {
             std::ops::Bound::Excluded(l) => l + 1,
             std::ops::Bound::Unbounded => 0,
         };
-        let r = match range.start_bound() {
+        let r = match range.end_bound() {
             std::ops::Bound::Included(r) => match r.checked_sub(1) {
                 Some(r) => r,
                 None => return None,
@@ -87,7 +87,7 @@ impl<T: Clone> ChthollyTree<T> {
         }
 
         self.split(l);
-        self.split(r - 1);
+        self.split(r);
 
         Some((l, r))
     }
@@ -176,5 +176,35 @@ mod test {
         let data = [-1, 2, 2, 3, 0, 0, 0, -4, -4, 10, 10, 12];
         let tree = ChthollyTree::from_iter(data);
         assert_eq!(tree.iter().copied().collect::<Vec<_>>(), data);
+    }
+
+    #[test]
+    fn split_range() {
+        let mut tree = [1, 1, 2, 3, 4, 5, 5, 5, 5]
+            .into_iter()
+            .collect::<ChthollyTree<_>>();
+        tree.split_range(6..8);
+        assert_eq!(
+            tree.inner.into_iter().collect::<Vec<_>>(),
+            vec![
+                (0, (2, 1)),
+                (2, (3, 2)),
+                (3, (4, 3)),
+                (4, (5, 4)),
+                (5, (6, 5)),
+                (6, (8, 5)),
+                (8, (9, 5))
+            ]
+        );
+    }
+
+    #[test]
+    fn assign() {
+        let mut tree = ChthollyTree::from_iter([1, 1, 2, 3, 4, 4, 4, 5, 7, 8]);
+        tree.assign(10, 3..6);
+        assert_eq!(
+            tree.iter().copied().collect::<Vec<_>>(),
+            [1, 1, 2, 10, 10, 10, 4, 5, 7, 8]
+        );
     }
 }

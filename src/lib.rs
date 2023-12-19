@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::iter::FromIterator;
 use std::ops::RangeBounds;
 
+use num_traits::{Num, NumCast};
+
 #[derive(Debug, Default)]
 pub struct ChthollyTree<T> {
     inner: BTreeMap<usize, (usize, T)>,
@@ -29,6 +31,32 @@ impl<T> ChthollyTree<T> {
             cur: None,
             iter: self.inner.iter(),
         }
+    }
+
+    pub fn map(&mut self, f: impl Fn(&mut T)) {
+        self.inner.iter_mut().for_each(|(_, (_, val))| f(val));
+    }
+
+    pub fn fold<Acc>(&self, init: Acc, f: impl Fn(Acc, usize, &T) -> Acc) -> Acc {
+        self.inner
+            .iter()
+            .fold(init, |acc, (l, (r, val))| f(acc, r - l, val))
+    }
+}
+
+impl<T: Num + NumCast + Clone> ChthollyTree<T> {
+    pub fn sum(&self) -> T {
+        self.fold(T::zero(), |acc, repeat, val| {
+            acc + T::from(repeat).unwrap() * val.clone()
+        })
+    }
+
+    pub fn range_sum(&mut self, range: impl RangeBounds<usize>) -> T {
+        self.fold_range(
+            T::zero(),
+            |acc, repeat, val| acc + T::from(repeat).unwrap() * val.clone(),
+            range,
+        )
     }
 }
 
@@ -110,13 +138,29 @@ impl<T: Clone> ChthollyTree<T> {
         self.inner.insert(l, (r, val));
     }
 
-    pub fn map(&mut self, f: impl Fn(&mut T), range: impl RangeBounds<usize>) {
+    pub fn map_range(&mut self, f: impl Fn(&mut T), range: impl RangeBounds<usize>) {
         let (l, r) = match self.split_range(range) {
             Some(rg) => rg,
             _ => return,
         };
 
         self.inner.range_mut(l..r).for_each(|(_, (_, val))| f(val));
+    }
+
+    pub fn fold_range<Acc>(
+        &mut self,
+        init: Acc,
+        f: impl Fn(Acc, usize, &T) -> Acc,
+        range: impl RangeBounds<usize>,
+    ) -> Acc {
+        let (l, r) = match self.split_range(range) {
+            Some(rg) => rg,
+            _ => return init,
+        };
+
+        self.inner
+            .range(l..r)
+            .fold(init, |acc, (l, (r, val))| f(acc, r - l, val))
     }
 }
 
@@ -205,6 +249,21 @@ mod test {
         assert_eq!(
             tree.iter().copied().collect::<Vec<_>>(),
             [1, 1, 2, 10, 10, 10, 4, 5, 7, 8]
+        );
+    }
+
+    #[test]
+    fn sum() {
+        let tree = ChthollyTree::from_iter([1, 1, 2, 3, 4, 4, 4, 5, 7, 8]);
+        assert_eq!(tree.sum(), [1, 1, 2, 3, 4, 4, 4, 5, 7, 8].into_iter().sum());
+    }
+
+    #[test]
+    fn range_fold() {
+        let mut tree = ChthollyTree::from_iter([1, 1, 2, 3, 4, 4, 4, 5, 7, 8]);
+        assert_eq!(
+            tree.range_sum(3..6),
+            [1, 1, 2, 3, 4, 4, 4, 5, 7, 8][3..6].into_iter().sum()
         );
     }
 }
